@@ -166,3 +166,121 @@ ggplot(aes(Year, pctWiP)) +
   ylab("% Women in Parliament")
 ```
 
+```{r}
+WP[Country %in% c("Portugal", "Sweden", "Spain",
+      "Hungary", "Romania", "Finland", "Germany",
+      "European Union")] %>%
+  ggplot(aes(Year, pctWiP, colour=Country)) +
+  geom_line() +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1990, 2020, 5)) +
+  scale_y_continuous(limits=c(0, 50),
+  breaks=seq(0, 50, by=10)) +
+  ggtitle("Women in Parliament: EU Countries") +
+ylab("% Women in Parliament")
+```
+
+```{r}
+WP[order(-pctWiP), head(.SD, 10)]
+```
+
+```{r}
+WP[order(Year, -pctWiP), head(.SD, 1), by = Year]
+```
+
+```{r}
+library(countrycode)
+cl <- as.data.table(codelist)[, .(continent, wb)]
+setnames(cl, c("continent", "wb"), c("Continent", "Code"))
+cWP <- cl[WP, on="Code"]
+```
+
+```{r}
+cWP[Year %in% c(1990, 2018) & !is.na(Continent)][
+order(Year, -pctWiP), head(.SD, 1),
+by = .(Year, Continent)][
+order(Continent, Year),
+.(Continent, Year, Country, pctWiP)]
+```
+
+```{r}
+dWP <- cWP[
+order(Country, Year), .SD[c(1,.N)],
+by=Country][,
+pctDiff := pctWiP - shift(pctWiP), by=Country][
+pctDiff<0][
+order(pctDiff)]
+dWP[!is.na(Continent),
+.(Country, pctWiP, pctDiff)]
+```
+
+```{r}
+dclpct <- unique(dWP[!is.na(Continent) &
+pctDiff <= -5]$Country)
+WP[Country %in% dclpct] %>%
+ggplot(aes(Year, pctWiP, colour=Country)) +
+geom_line() +
+geom_point() +
+scale_x_continuous(breaks=seq(1990, 2020, 5)) +
+scale_y_continuous(limits=c(0, 40),
+breaks=seq(0, 40, by=10)) +
+ggtitle("Women in Parliament: Decline >=5%") +
+ylab("% Women in Parliament")
+```
+
+```{r}
+cWP[!is.na(Continent),
+`:=`(RankG = rank(-pctWiP), TotalG = .N),
+by = .(Year)]
+```
+
+```{r}
+cWP[Country=="Portugal",
+.(Country, Year, pctWiP, Ratio, RankG, TotalG)][
+order(Year)]
+```
+
+```{r}
+cWP[!is.na(Continent),
+`:=`(RankC = rank(-pctWiP), TotalC = .N),
+by = .(Continent, Year)]
+```
+
+```{r}
+cWP[Country=="Portugal",
+.(Country, Year, pctWiP, Ratio, RankC, TotalC)][
+order(Year)]
+```
+
+```{r}
+cWP[Country %in% c("Portugal", "Sweden", "Spain",
+"Hungary", "Romania", "Finland", "Germany")] %>%
+ggplot(aes(Year, RankC, colour=Country)) +
+geom_line() +
+geom_point() +
+scale_x_continuous(breaks=seq(1990, 2020, 5)) +
+scale_y_continuous(limits=c(0, 45), breaks=seq(0, 45, by=10)) +
+ggtitle("Women in Parliament: Ranked") +
+ylab("Rank in Europe")
+```
+
+```{r}
+cWP[Year %in% c(1990, 2018) & RankC==1][
+order(Continent, Year),
+.(Continent, Year, Country, pctWiP, RankC)]
+```
+
+```{r}
+library(gghighlight)
+cWP[is.na(Continent)] %>%
+ggplot(aes(Year, pctWiP, group=Country)) +
+geom_line() +
+gghighlight(Country=="World",
+use_direct_label = FALSE) +
+scale_x_continuous(breaks=seq(1990, 2020, 5)) +
+scale_y_continuous(limits=c(0, 40),
+breaks=seq(0, 40, by=10)) +
+ggtitle("Women in Parliament: Global Trends") +
+ylab("% Women in Parliament")
+```
+
